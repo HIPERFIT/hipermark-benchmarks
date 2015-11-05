@@ -108,7 +108,7 @@ int main() {
   FILE* runtime_file = fopen(getenv("HIPERMARK_RUNTIME"), "w");
   FILE* result_file = fopen(getenv("HIPERMARK_RESULT"), "w");
 
-  fprintf(runtime_file, "%ld\n", elapsed_usec / 1000);
+  fprintf(runtime_file, "%ld\n", elapsed_usec);
   fprintf(result_file, "%f\n", result);
 
   fclose(runtime_file);
