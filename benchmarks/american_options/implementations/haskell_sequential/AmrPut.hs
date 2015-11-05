@@ -9,6 +9,8 @@ import Data.List(foldl')
 import System.Environment (getEnv)
 import System.CPUTime
 
+type FloatRep = Float
+
 -- Pointwise manipulation of vectors and scalars
 (^*^), (^+^) :: (Num c, V.Unbox c) =>
                 V.Vector c -> V.Vector c -> V.Vector c
@@ -24,11 +26,11 @@ pmax :: (Ord b, V.Unbox b) =>
         V.Vector b -> b -> V.Vector b
 pmax v c = V.map (max c) v
 
-ppmax :: V.Vector Double -> V.Vector Double -> V.Vector Double
+ppmax :: V.Vector FloatRep -> V.Vector FloatRep -> V.Vector FloatRep
 ppmax = V.zipWith max
 
 
-binom :: Int -> Double
+binom :: Int -> FloatRep
 binom expiry = V.head first
   where
     uPow = V.generate (n+1) (u^)
