@@ -3,7 +3,7 @@
 -- https://github.com/kfl/american-options.
 --
 -- This implementation is a straightforward sequential port - it is
--- fairly slow on the GPU.
+-- not parallel, but it is in-place.
 
 -- constants
 
@@ -30,17 +30,15 @@ fun real binom(int expiry) =
   let uPow = map(u **, map(toFloat, iota(n+1))) in
   let dPow = map(d **, map(toFloat, map(n-, iota(n+1)))) in
   let st = map(toFloat(s0())*, map(*, zip(uPow, dPow))) in
-  let finalPut = map(maxReal(0.0), map(toFloat(strike())-, st)) in
-  loop (put = finalPut) = for n+1 > i >= 1 do
-    let {uPow_start, _} = split((i), uPow) in
-    let {_, dPow_end} = split((n+1-i), dPow) in
-    let st = map(toFloat(s0())*, map(*, zip(uPow_start, dPow_end))) in
-    let {_, put_tail} = split((1), put) in
-    let {put_init, _} = split((size(0,put)-1), put) in
-    map(maxReal, zip(map(toFloat(strike())-, st),
-                     map(+,
-                         zip(map(qUR*, put_tail),
-                             map(qDR*, put_init))))) in
+  let put = copy(map(maxReal(0.0), map(toFloat(strike())-, st))) in
+  loop (put) = for n+1 > i >= 1 do
+    loop (put) = for j < i do
+      let st_j = toFloat(s0()) * (uPow[j] * dPow[n+1-i+j]) in
+      let x = toFloat(strike()) - st_j in
+      let y = qUR * put[j+1] + qDR * put[j] in
+      let put[j] = maxReal(x,y) in
+      put in
+    put in
   put[0]
 
 fun real main(int expiry) =
