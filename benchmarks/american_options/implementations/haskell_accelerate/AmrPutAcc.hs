@@ -96,7 +96,7 @@ time x = do
 main :: IO ()
 main = do
   n <- liftM read getContents
-  (v, runtime) <- time $ arun ACUDA.run $ binom (read n)
+  (v, runtime) <- time $ arun ACUDA.run $ binom n
   result <- getEnv "HIPERMARK_RESULT"
   writeFile result $ show v
   runtime_file <- getEnv "HIPERMARK_RUNTIME"
