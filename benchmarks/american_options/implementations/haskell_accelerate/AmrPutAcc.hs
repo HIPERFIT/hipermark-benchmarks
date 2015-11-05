@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module AmrPutAcc 
+module AmrPutAcc
        (binom, main)
 where
 import qualified Data.Array.Accelerate as A
@@ -10,11 +10,11 @@ import Data.Array.Accelerate (Z(..), (:.)(..),(!))
 import qualified Data.Array.Accelerate.Interpreter as AI
 import qualified Data.Array.Accelerate.CUDA as ACUDA
 
-import Data.List(foldl1')
-import System.Environment(getArgs)
-
---import qualified Criterion.Main as C
-
+import Control.DeepSeq (deepseq, NFData)
+import Control.Monad
+import Data.List (foldl1')
+import System.Environment (getEnv)
+import System.CPUTime
 
 -- Pointwise manipulation of vectors an scalars
 v1 ^*^ v2 = A.zipWith (*) v1 v2
@@ -30,20 +30,20 @@ vinit = A.init
 vtake i v = A.take (A.constant i) v
 vdrop i v = A.drop (A.constant i) v
 
-vreverse v = 
+vreverse v =
   let len = A.unindex1 (A.shape v) in
   A.backpermute (A.shape v) (\ix -> A.index1 $ len - (A.unindex1 ix) - 1) v
 
 type FloatRep = Float
---type FloatRep = Double  
+--type FloatRep = Double
 -- I would like to use Double, but my NVIDA card does not support double
 
 
 binom :: Int -> A.Acc(A.Vector FloatRep)
 binom expiry = first
-  where     
+  where
     i2f = A.fromIntegral . A.unindex1
-    
+
     uPow, dPow :: Int -> A.Acc(A.Vector FloatRep)
     dPow i = vdrop (n+1-i)
            $ vreverse
@@ -61,14 +61,14 @@ binom expiry = first
 -- }
     first = foldl1' (A.>->) (map prevPut [n, n-1 .. 1]) finalPut
     prevPut :: Int -> A.Acc(A.Vector FloatRep) -> A.Acc(A.Vector FloatRep)
-    prevPut i put = 
+    prevPut i put =
       ppmax(strike -^ st) ((qUR *^ vtail put) ^+^ (qDR *^ vinit put))
         where st = s0 *^ (uPow i ^*^ dPow i)
 
     -- standard econ parameters
     strike = 100
     bankDays = 252
-    s0 = 100 
+    s0 = 100
     r = 0.03; alpha = 0.07; sigma = 0.20
 
     n :: Int
@@ -87,9 +87,17 @@ binom expiry = first
 
 arun run x = head $ A.toList $ run x
 
+time :: NFData t => t -> IO (t, Integer)
+time x = do
+  start <- getCPUTime -- In picoseconds; 1 microsecond == 10^6 picoseconds.
+  end <- x `deepseq` getCPUTime
+  return (x, (end - start) `div` 1000000)
+
+main :: IO ()
 main = do
-  args <- getArgs
-  case args of
-    ["-c", n] -> print $ arun ACUDA.run $ binom (read n)
-    ["-i", n] -> print $ arun AI.run $ binom (read n)
-    _         -> print $ arun ACUDA.run $ binom 8
+  n <- liftM read getContents
+  (v, runtime) <- time $ arun ACUDA.run $ binom (read n)
+  result <- getEnv "HIPERMARK_RESULT"
+  writeFile result $ show v
+  runtime_file <- getEnv "HIPERMARK_RUNTIME"
+  writeFile runtime_file $ show runtime
