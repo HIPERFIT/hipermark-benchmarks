@@ -6,7 +6,7 @@ include $(HIPERMARK_LIB_DIR)/setup.mk
 EXECUTABLE = amr_put
 SOURCES = amr_put.fut
 
-FUTFLAGS = --unsafe --real-as-single
+FUTFLAGS = --real-as-single
 
 default: $(EXECUTABLE)
 
