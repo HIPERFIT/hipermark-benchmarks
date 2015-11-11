@@ -101,6 +101,8 @@ time x = do
 main :: IO ()
 main = do
   n <- liftM read getContents
+  -- FIXME: this isn't even close to measuring the real runtime.
+  -- Accelerate is not easy to benchmark at all.
   (v, runtime) <- time $ arun ACUDA.run $ binom $ A.constant n
   result <- getEnv "HIPERMARK_RESULT"
   writeFile result $ show v
